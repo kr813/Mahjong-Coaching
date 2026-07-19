@@ -39,7 +39,7 @@ RUN set -ex \
 WORKDIR /app
 COPY --from=builder /mjai-reviewer/target/release/mjai-reviewer ./mjai-reviewer
 COPY --from=builder /mjai-reviewer/akochan ./akochan
-COPY flask_app.py requirements.txt ./
+COPY flask_app.py extract.py requirements.txt ./
 
 RUN python3 -m venv /opt/venv \
   && /opt/venv/bin/python -m pip install --upgrade pip setuptools wheel \
