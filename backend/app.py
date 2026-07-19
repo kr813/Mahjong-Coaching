@@ -81,7 +81,8 @@ def report() -> Response | tuple[str, int]:
         # advice = interactllm._generate_advice(parsed_data)
         # if isinstance(parsed_data, dict):
         #     parsed_data["llm_advice"] = advice
-        # return jsonify(parsed_data)
+        
+        # return render_template('出力用.html', user_data=parsed_data)
 
         return jsonify(parsed_data)
 
