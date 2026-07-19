@@ -1,3 +1,8 @@
+# 連絡事項
+- index.htmlの配置パスは Mahjong-Coaching/frontend/index.htmlでお願いします
+- /reportにPOSTする形でファイルのを受け渡してください
+- 
+
 # backend
 
 A small Flask backend that runs `mjai-reviewer` in Docker and returns HTML output.

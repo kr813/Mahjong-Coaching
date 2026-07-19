@@ -1,79 +1,91 @@
 from __future__ import annotations
 
-import argparse
 import os
-import subprocess
-import sys
 import tempfile
+from pathlib import Path
+
 from flask import Flask, Response, jsonify, request, send_file
+
+import extract
+import interactakochan
 
 app = Flask(__name__)
 
-# Use an OCI image name or a local image name.
-MJAI_REVIEWER_IMAGE = os.environ.get("MJAI_REVIEWER_IMAGE", "mjai-reviewer:latest")
-CONTAINER_INPUT_PATH = "/work/input.json"
+
+def _write_temp_file(suffix: str, content: bytes) -> Path:
+    temp_file = Path(tempfile.NamedTemporaryFile(suffix=suffix, delete=False).name)
+    temp_file.write_bytes(content)
+    return temp_file
 
 
-def run_mjai_reviewer(input_file: str, seat: int = 0) -> tuple[int, str, str]:
-    cmd = [
-        "docker",
-        "run",
-        "--rm",
-        "-v",
-        f"{input_file}:{CONTAINER_INPUT_PATH}:ro",
-        MJAI_REVIEWER_IMAGE,
-        "-e",
-        "akochan",
-        "--no-open",
-        "-i",
-        CONTAINER_INPUT_PATH,
-        "-a",
-        str(seat),
-        "-o",
-        "-",
-    ]
-    process = subprocess.run(cmd, capture_output=True, encoding='utf-8', errors='replace')
-    return process.returncode, process.stdout, process.stderr
+def _remove_file(path: Path | None) -> None:
+    if path is None:
+        return
+    try:
+        path.unlink()
+    except OSError:
+        pass
 
 
 @app.route("/report", methods=["POST"])
 def report() -> Response | tuple[str, int]:
-    """Generate an HTML report from JSON input.
-
-    POST body can be either JSON or multipart file upload.
-    Query parameters:
-      seat=0..3   東家=0 南家=1 西家=2 北家=3
-    """
-    seat = request.args.get("seat", "0")
+    seat = (request.args.get("seat") or "0").strip()
     if seat not in {"0", "1", "2", "3"}:
-        return jsonify(error="seat must be 0,1,2 or 3"), 400
+        return jsonify(error="seat must be 0, 1, 2, or 3"), 400
 
-    if request.is_json:
-        body = request.get_data()
-        if not body:
-            return jsonify(error="Empty JSON body"), 400
-    elif "file" in request.files:
-        body = request.files["file"].read()
-        if not body:
-            return jsonify(error="Uploaded file is empty"), 400
-    else:
-        return jsonify(error="Provide JSON body or multipart file named 'file'"), 400
+    source_type = (request.args.get("source_type") or "").strip().lower()
+    if not source_type:
+        if request.args.get("url", "").strip():
+            source_type = "url"
+        elif request.is_json:
+            source_type = "json"
+        elif "file" in request.files:
+            source_type = "file"
+        else:
+            return jsonify(error="source_type is required when url/file/json is not provided"), 400
 
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
-        temp_file.write(body)
-        temp_path = temp_file.name
-
+    html_path = None
+    report_html = ""
     try:
-        code, stdout, stderr = run_mjai_reviewer(temp_path, int(seat))
-        if code != 0:
-            message = stderr or f"Docker exited with code {code}"
-            return Response(message, status=500, mimetype="text/plain")
-        return Response(stdout, mimetype="text/html")
+        if source_type == "url":
+            url = (request.args.get("url") or "").strip()
+            if not url:
+                return jsonify(error="query parameter 'url' is required for source_type=url"), 400
+            report_html = interactakochan.call_report(source_type="url", url=url, seat=int(seat))
+        elif source_type == "file":
+            uploaded_file = request.files.get("file")
+            if uploaded_file is None:
+                return jsonify(error="file upload is required for source_type=file"), 400
+            if uploaded_file.filename == "":
+                return jsonify(error="uploaded file is missing or empty"), 400
+            html_path = _write_temp_file(".json", uploaded_file.read())
+            report_html = interactakochan.call_report(source_type="file", file_path=str(html_path), seat=int(seat))
+        elif source_type == "json":
+            if not request.is_json:
+                return jsonify(error="JSON body is required for source_type=json"), 400
+            body = request.get_data()
+            if not body:
+                return jsonify(error="JSON body is empty"), 400
+            html_path = _write_temp_file(".json", body)
+            report_html = interactakochan.call_report(source_type="json", json_path=str(html_path), seat=int(seat))
+        else:
+            return jsonify(error="source_type must be one of json, file, url"), 400
+
+        temp_html_path = _write_temp_file(".html", report_html.encode("utf-8"))
+        parsed_data = extract.extract_report(str(temp_html_path))
+        if parsed_data is None:
+            parsed_data = {}
+        return jsonify(
+            source_type=source_type,
+            seat=int(seat),
+            parsed_report=parsed_data,
+            report_html=report_html,
+        )
+
     finally:
-        try:
-            os.remove(temp_path)
-        except OSError:
-            pass
+        _remove_file(html_path)
+        if 'temp_html_path' in locals():
+            _remove_file(temp_html_path)
 
 
 @app.route("/", methods=["GET"])
@@ -81,38 +93,6 @@ def index() -> Response:
     return send_file(os.path.join(os.path.dirname(__file__), "frontend.html"))
 
 
-@app.route("/healthz", methods=["GET"])
-def healthz() -> Response:
-    return Response("OK", mimetype="text/plain")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Run mjai-reviewer via Flask or CLI")
-    parser.add_argument("--file", help="Local JSON file to process")
-    parser.add_argument("--seat", type=int, default=0, choices=range(0, 4), help="Seat number 0..3")
-    parser.add_argument("--host", default="0.0.0.0", help="Flask host")
-    parser.add_argument("--port", type=int, default=8000, help="Flask port")
-    parser.add_argument("--serve", action="store_true", help="Start Flask server")
-    args = parser.parse_args()
-
-    if args.file:
-        if not os.path.exists(args.file):
-            print(f"Error: file not found: {args.file}", file=sys.stderr)
-            return 1
-        code, stdout, stderr = run_mjai_reviewer(args.file, args.seat)
-        if code != 0:
-            print(stderr or f"Docker exited with code {code}", file=sys.stderr)
-            return code
-        sys.stdout.buffer.write(stdout.encode("utf-8", errors="replace"))
-        return 0
-
-    if args.serve:
-        app.run(host=args.host, port=args.port)
-        return 0
-
-    parser.print_help()
-    return 1
-
-
 if __name__ == "__main__":
-    raise SystemExit(main())
+    port = int(os.environ.get("PORT", "8000"))
+    app.run(host="0.0.0.0", port=port)
