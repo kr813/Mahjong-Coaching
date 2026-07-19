@@ -23,14 +23,7 @@ class ReportEndpointTests(unittest.TestCase):
             response = self.client.post("/report?seat=0&source_type=url&url=https://example.com")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.get_json(),
-            {
-                "source_type": "url",
-                "seat": 0,
-                "parsed_report": expected_parsed,
-            },
-        )
+        self.assertEqual(response.get_json(), expected_parsed)
         mock_call_report.assert_called_once()
         mock_extract.assert_called_once()
 

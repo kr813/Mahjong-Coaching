@@ -8,6 +8,7 @@ from flask import Flask, Response, jsonify, request, send_file
 
 import extract
 import interactakochan
+import interactllm
 
 app = Flask(__name__)
 
@@ -75,12 +76,14 @@ def report() -> Response | tuple[str, int]:
         parsed_data = extract.extract_report(str(temp_html_path))
         if parsed_data is None:
             parsed_data = {}
-        return jsonify(
-            source_type=source_type,
-            seat=int(seat),
-            parsed_report=parsed_data,
-            report_html=report_html,
-        )
+
+        # OCIのLLMと連携し、アドバイスをJSONに追加して返す処理（現在は不要のためコメントアウト）
+        # advice = interactllm._generate_advice(parsed_data)
+        # if isinstance(parsed_data, dict):
+        #     parsed_data["llm_advice"] = advice
+        # return jsonify(parsed_data)
+
+        return jsonify(parsed_data)
 
     finally:
         _remove_file(html_path)
