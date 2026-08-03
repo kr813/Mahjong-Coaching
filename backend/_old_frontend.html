@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mjai-reviewer Frontend</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #f7f8fb; color: #111; }
+    main { max-width: 1000px; margin: auto; }
+    header { margin-bottom: 1rem; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.8rem; }
+    fieldset { border: 1px solid #ccd0da; border-radius: 8px; padding: 1rem; background: #fff; }
+    label { display: block; margin-bottom: 0.75rem; }
+    input, select, button { font: inherit; padding: 0.6rem 0.8rem; border: 1px solid #b0b7c2; border-radius: 6px; }
+    button { background: #2563eb; color: white; cursor: pointer; border-color: #1d4ed8; }
+    button:hover { background: #1d4ed8; }
+    #message { margin-top: 1rem; min-height: 1.5rem; }
+    #reportFrame { width: 100%; height: 70vh; border: 1px solid #ccd0da; border-radius: 8px; background: white; }
+    .help { margin: 0.5rem 0 1rem; color: #555; }
+    .actions { margin-top: 0.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    a { color: #2563eb; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>mjai-reviewer Frontend</h1>
+      <p class="help">JSON ファイルをアップロードしてレポートを生成します。生成後は画面内で結果を表示できます。</p>
+    </header>
+
+    <form id="reportForm">
+      <fieldset>
+        <legend>レポート入力</legend>
+        <label>
+          JSON ファイル
+          <input type="file" id="fileInput" accept=".json,application/json" required />
+        </label>
+        <label>
+          席番号
+          <select id="seatSelect">
+            <option value="0">0 (東家)</option>
+            <option value="1">1 (南家)</option>
+            <option value="2">2 (西家)</option>
+            <option value="3">3 (北家)</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button type="submit">レポート生成</button>
+          <a id="downloadLink" href="#" download="report.html" style="display:none; align-self:center;">HTML を保存</a>
+        </div>
+      </fieldset>
+    </form>
+
+    <div id="message"></div>
+    <iframe id="reportFrame" title="Report"></iframe>
+  </main>
+
+  <script>
+    const form = document.getElementById('reportForm');
+    const fileInput = document.getElementById('fileInput');
+    const seatSelect = document.getElementById('seatSelect');
+    const message = document.getElementById('message');
+    const reportFrame = document.getElementById('reportFrame');
+    const downloadLink = document.getElementById('downloadLink');
+    let currentBlobUrl = null;
+
+    function setMessage(text, isError = false) {
+      message.textContent = text;
+      message.style.color = isError ? '#b91c1c' : '#111';
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) {
+        setMessage('JSON ファイルを選択してください。', true);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setMessage('レポートを生成中...', false);
+      reportFrame.srcdoc = '';
+      downloadLink.style.display = 'none';
+      URL.revokeObjectURL(currentBlobUrl);
+      currentBlobUrl = null;
+
+      try {
+        const response = await fetch(`/report?seat=${seatSelect.value}`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const text = await response.text();
+        if (!response.ok) {
+          setMessage(`エラー: ${text}`, true);
+          return;
+        }
+
+        setMessage('レポートが生成されました。下のフレームで確認できます。');
+        reportFrame.srcdoc = text;
+        const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
+        currentBlobUrl = URL.createObjectURL(blob);
+        downloadLink.href = currentBlobUrl;
+        downloadLink.style.display = 'inline-block';
+      } catch (error) {
+        setMessage('通信エラーが発生しました。サーバーが起動しているか確認してください。', true);
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
