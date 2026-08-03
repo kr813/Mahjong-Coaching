@@ -1,9 +1,0 @@
-version: "3.9"
-
-services:
-  testbash:
-    build: .
-    container_name: akochan
-    tty: true
-    # command: ["/bin/bash", "-c", "while true; do sleep 3600; done"]
-    
