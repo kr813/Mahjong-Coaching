@@ -77,12 +77,10 @@ def report() -> Response | tuple[str, int]:
         if parsed_data is None:
             parsed_data = {}
 
-        # OCIのLLMと連携し、アドバイスをJSONに追加して返す処理（現在は不要のためコメントアウト）
-        # advice = interactllm._generate_advice(parsed_data)
-        # if isinstance(parsed_data, dict):
-        #     parsed_data["llm_advice"] = advice
-        
-        # return render_template('出力用.html', user_data=parsed_data)
+        # OCIのLLMと連携し、アドバイスをJSONに追加して返す処理
+        advice = interactllm._generate_advice(parsed_data)
+        if isinstance(parsed_data, dict):
+            parsed_data["llm_advice"] = advice
 
         return jsonify(parsed_data)
 
@@ -91,6 +89,13 @@ def report() -> Response | tuple[str, int]:
         if 'temp_html_path' in locals():
             _remove_file(temp_html_path)
 
+@app.route("/error", methods=["GET", "POST"])
+def error() -> Response | tuple[str, int]:
+    return jsonify(error="error")
+
+@app.route("/analysis", methods=["GET", "POST"])
+def analysis() -> Response | tuple[str, int]:
+    return "analysis"
 
 @app.route("/", methods=["GET"])
 def index() -> Response:
