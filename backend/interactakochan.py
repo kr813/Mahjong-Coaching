@@ -9,8 +9,7 @@ from pathlib import Path
 
 RESULT_DIR = Path(__file__).resolve().parent / "result"
 SOURCE_DIR = Path(__file__).resolve().parent / "source"
-DEFAULT_IMAGE = os.environ.get("MJAI_REVIEWER_IMAGE", "mjai-reviewer-flask:latest")
-DEFAULT_ENGINE = os.environ.get("MJAI_REVIEWER_ENGINE", "akochan")
+
 DEFAULT_ENDPOINT = os.environ.get("MJAI_REVIEWER_ENDPOINT", "http://localhost:8000/report")
 
 
@@ -44,28 +43,6 @@ def _run_command(command: list[str]) -> str:
     return stdout
 
 
-def _build_docker_command(source_type: str, source: str | None, seat: int, engine: str) -> list[str]:
-    command = ["sudo", "docker", "run", "--rm", "-e", "OMP_NUM_THREADS=8"]
-    command.extend(["-e", "LD_LIBRARY_PATH=/mjai-reviewer/akochan", "-w", "/mjai-reviewer"])
-
-    if source_type in {"file", "json"}:
-        if not source:
-            raise ValueError("source file path is required for file/json source_type")
-        source_path = Path(source).resolve()
-        source_dir = source_path.parent
-        container_path = "/data"
-        command.extend(["-v", f"{source_dir}:{container_path}"])
-        source = f"{container_path}/{source_path.name}"
-
-    command.append(DEFAULT_IMAGE)
-    command.extend(["-e", engine])
-    if source_type == "url":
-        command.extend(["-u", source or ""])
-    else:
-        command.extend(["-i", source or ""])
-    command.extend(["-a", str(seat), "-o", "-"])
-    return command
-
 
 def _build_curl_command(source_type: str, source: str | None, seat: int, endpoint: str) -> list[str]:
     endpoint_with_seat = f"{endpoint}?seat={seat}"
@@ -88,10 +65,11 @@ def call_report(
     url: str | None = None,
     seat: int = 0,
     endpoint: str | None = None,
-    engine: str | None = None,
 ) -> str:
-    engine = engine or DEFAULT_ENGINE
     endpoint = endpoint or DEFAULT_ENDPOINT
+    if not endpoint:
+        raise ValueError("endpoint is required (or set MJAI_REVIEWER_ENDPOINT)")
+
     source = None
     if source_type == "url":
         if not url:
@@ -108,11 +86,7 @@ def call_report(
     else:
         raise ValueError("source_type must be one of url, file, json")
 
-    if endpoint:
-        command = _build_curl_command(source_type, source, seat, endpoint)
-        return _run_command(command)
-
-    command = _build_docker_command(source_type, source, seat, engine)
+    command = _build_curl_command(source_type, source, seat, endpoint)
     return _run_command(command)
 
 

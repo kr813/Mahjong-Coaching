@@ -60,14 +60,11 @@ def analyze() -> str | Response | tuple[str, int]:
     except ValueError as e:
         return jsonify(error=str(e)), 400
     except Exception as e:
-        error_msg = str(e)
-        if "docker" in error_msg.lower() or "npipe://" in error_msg.lower():
-            error_msg = "Docker デーモンに接続できませんでした。Docker Desktop が起動していることを確認してください。"
         return render_template(
             "error.html",
             error_code="500",
             error_title="解析エンジンエラー",
-            error_message=error_msg
+            error_message=str(e)
         ), 500
 
 @app.route("/", methods=["GET"])
