@@ -11,7 +11,7 @@ RESULT_DIR = Path(__file__).resolve().parent / "result"
 SOURCE_DIR = Path(__file__).resolve().parent / "source"
 DEFAULT_IMAGE = os.environ.get("MJAI_REVIEWER_IMAGE", "mjai-reviewer:latest")
 DEFAULT_ENGINE = os.environ.get("MJAI_REVIEWER_ENGINE", "akochan")
-DEFAULT_ENDPOINT = os.environ.get("MJAI_REVIEWER_ENDPOINT")
+DEFAULT_ENDPOINT = os.environ.get("MJAI_REVIEWER_ENDPOINT", "http://localhost:8000/report")
 
 
 

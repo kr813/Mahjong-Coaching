@@ -61,16 +61,8 @@ def analyze() -> str | Response | tuple[str, int]:
         return jsonify(error=str(e)), 400
     except Exception as e:
         error_msg = str(e)
-        is_docker_error = any(
-            x in error_msg.lower() 
-            for x in ["docker", "npipe://", "docker.sock", "daemon", "cannot connect"]
-        )
-        if is_docker_error:
-            error_msg = (
-                "解析エンジン（Docker）に接続できませんでした。"
-                "Docker デーモンが起動していること、または外部接続先（環境変数 'MJAI_REVIEWER_ENDPOINT'）"
-                "が正しく設定されていることを確認してください。"
-            )
+        if "docker" in error_msg.lower() or "npipe://" in error_msg.lower():
+            error_msg = "Docker デーモンに接続できませんでした。Docker Desktop が起動していることを確認してください。"
         return render_template(
             "error.html",
             error_code="500",
