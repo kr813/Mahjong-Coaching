@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", help="JSON body file path")
     parser.add_argument("--url", help="Tenhou log URL")
     parser.add_argument("--seat", type=int, default=0, choices=range(0, 4), help="Seat number 0..3")
-    parser.add_argument("--endpoint", default="http://localhost:8000/analyze", help="Flask report endpoint")
+    parser.add_argument("--endpoint", default="http://localhost:8000/report", help="Flask report endpoint")
     return parser
 
 
