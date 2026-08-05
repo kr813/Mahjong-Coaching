@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エラーが発生しました - 牌譜分析ツール</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+        }
+        .error-code {
+            font-size: 64px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 0;
+            line-height: 1;
+        }
+        h1 { font-size: 20px; color: #2c3e50; margin: 15px 0 10px; }
+        p { font-size: 14px; color: #7f8c8d; margin-bottom: 25px; line-height: 1.5; }
+        .back-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .back-btn:hover { background-color: #2980b9; }
+        .cat-illustration { margin-top: 25px; font-size: 30px; opacity: 0.3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <p class="error-code">{{ error_code }}</p>
+    <h1>{{ error_title }}</h1>
+    <p>{{ error_message }}</p>
+    
+    <a href="/" class="back-btn">トップページへ戻る</a>
+    <div class="cat-illustration">🐾 😿 🐾</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麻雀 AI牌譜添削ツール - 入力</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+        }
+        h1 { font-size: 20px; color: #2c3e50; margin-bottom: 20px; }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label { display: block; font-size: 13px; color: #7f8c8d; margin-bottom: 8px; font-weight: bold; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .submit-btn:hover { background-color: #2980b9; }
+        
+        /* エラーメッセージ用スタイル */
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 6px;
+            display: none;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>麻雀 AI牌譜添削ツール</h1>
+    
+    <!-- フォーム送信時に validateForm() を呼び出す -->
+    <form id="analyzeForm" action="/analyze" method="POST" onsubmit="return validateForm()">
+        <div class="input-group">
+            <label for="url">牌譜URL（天鳳・雀魂など）</label>
+            <input type="text" id="urlInput" name="url" placeholder="https://..." autocomplete="off">
+            <div id="errorMsg" class="error-message"></div>
+        </div>
+        
+        <button type="submit" class="submit-btn">解析を開始する</button>
+    </form>
+</div>
+
+<script>
+    function validateForm() {
+        const urlInput = document.getElementById('urlInput');
+        const errorMsg = document.getElementById('errorMsg');
+        const value = urlInput.value.trim();
+
+        // 1. 空欄チェック
+        if (value === "") {
+            showError("URLを入力してください。");
+            return false;
+        }
+
+        // 2. 「https://」から始まっているかチェック
+        if (!value.startsWith("https://")) {
+            showError("URLは 'https://' から始まる必要があります。");
+            return false;
+        }
+
+        // 3. 明らかな牌譜URL・ドメインの簡易チェック（例: 天鳳や雀魂のキーワードが含まれているか）
+        // ※必要に応じて判定キーワードは調整してください
+        const validKeywords = ["tenhou", "mahjongsoul", "jantama", "localhost", "127.0.0.1"]; // テスト用にローカルも許容
+        const isValidDomain = validKeywords.some(keyword => value.includes(keyword));
+
+        if (!isValidDomain) {
+            showError("有効な牌譜URL（天鳳・雀魂など）を入力してください。");
+            return false;
+        }
+
+        // エラーがない場合はクリアして送信を許可
+        errorMsg.style.display = "none";
+        urlInput.style.borderColor = "#dcdde1";
+        return true;
+    }
+
+    function showError(message) {
+        const urlInput = document.getElementById('urlInput');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        errorMsg.textContent = message;
+        errorMsg.style.display = "block";
+        urlInput.style.borderColor = "#e74c3c";
+    }
+</script>
+
+</body>
+</html>

@@ -3,112 +3,817 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>mjai-reviewer Frontend</title>
+  <title>麻雀AIコーチング - AI Reviewer</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <!-- marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #f7f8fb; color: #111; }
-    main { max-width: 1000px; margin: auto; }
-    header { margin-bottom: 1rem; }
-    h1 { margin: 0 0 0.5rem; font-size: 1.8rem; }
-    fieldset { border: 1px solid #ccd0da; border-radius: 8px; padding: 1rem; background: #fff; }
-    label { display: block; margin-bottom: 0.75rem; }
-    input, select, button { font: inherit; padding: 0.6rem 0.8rem; border: 1px solid #b0b7c2; border-radius: 6px; }
-    button { background: #2563eb; color: white; cursor: pointer; border-color: #1d4ed8; }
-    button:hover { background: #1d4ed8; }
-    #message { margin-top: 1rem; min-height: 1.5rem; }
-    #reportFrame { width: 100%; height: 70vh; border: 1px solid #ccd0da; border-radius: 8px; background: white; }
-    .help { margin: 0.5rem 0 1rem; color: #555; }
-    .actions { margin-top: 0.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    a { color: #2563eb; }
+    :root {
+      --bg-color: #0b1511;
+      --panel-bg: rgba(20, 35, 30, 0.75);
+      --border-color: rgba(212, 175, 55, 0.25);
+      --accent-gold: #d4af37;
+      --accent-gold-hover: #f3e5ab;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #0b1511 0%, #12281e 50%, #080f0c 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      line-height: 1.6;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.05em;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    @media (min-width: 900px) {
+      .container {
+        grid-template-columns: 400px 1fr;
+      }
+    }
+
+    /* パネルの共通スタイル */
+    .card {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      animation: slideUp 0.6s ease-out;
+    }
+
+    /* タブ切り替え */
+    .tab-header {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-gold);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* フォームスタイル */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--accent-gold);
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    input[type="text"], input[type="file"], select, textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #d4af37 0%, #aa8410 100%);
+      color: #0b1511;
+      border: none;
+      border-radius: 8px;
+      padding: 0.9rem;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+      background: linear-gradient(135deg, #f3e5ab 0%, #d4af37 100%);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    /* メッセージ・ステータス */
+    #statusMessage {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      display: none;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .status-info { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; }
+    .status-error { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+    .status-success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+
+    /* 結果パネル */
+    .result-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .result-placeholder svg {
+      width: 64px;
+      height: 64px;
+      fill: currentColor;
+      margin-bottom: 1rem;
+      opacity: 0.3;
+    }
+
+    .result-container {
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* 解析サマリーバッジ */
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .badge-container {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .badge-kyoku { color: var(--accent-gold); border-color: var(--border-color); }
+    
+    .loss-display {
+      text-align: right;
+    }
+
+    .loss-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .loss-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--danger);
+    }
+
+    /* 手牌エリア */
+    .tehai-section {
+      margin-bottom: 2rem;
+    }
+
+    .tehai-tiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* 麻雀牌のデザイン */
+    .mj-tile {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 56px;
+      background: linear-gradient(145deg, #ffffff 0%, #f0f0f0 100%);
+      border: 1px solid #c0c0c0;
+      border-radius: 6px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 2px 2px rgba(255, 255, 255, 0.8);
+      font-weight: bold;
+      position: relative;
+      user-select: none;
+      border-bottom: 4px solid #1f5f48; /* 緑色の背 */
+      transition: transform 0.2s ease;
+    }
+
+    .mj-tile:hover {
+      transform: translateY(-4px);
+    }
+
+    .mj-tile .tile-number {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .mj-tile .tile-suit {
+      font-size: 0.75rem;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .mj-tile.tile-m { color: #d32f2f; }
+    .mj-tile.tile-p { color: #1976d2; }
+    .mj-tile.tile-s { color: #388e3c; }
+    .mj-tile.tile-z { color: #212121; }
+    .mj-tile.tile-red { color: #d32f2f; }
+
+    /* 比較対比セクション */
+    .comparison-section {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (min-width: 600px) {
+      .comparison-section {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .compare-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .compare-card.player {
+      border-left: 5px solid var(--danger);
+    }
+
+    .compare-card.ai {
+      border-left: 5px solid var(--success);
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.1);
+    }
+
+    .compare-info {
+      flex: 1;
+    }
+
+    .compare-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .compare-ev {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    /* LLMアドバイスセクション */
+    .advice-section {
+      background: rgba(212, 175, 55, 0.05);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.03);
+    }
+
+    .advice-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* マークダウンの表示スタイリング */
+    .advice-content {
+      color: #e5e7eb;
+      font-size: 1rem;
+    }
+
+    .advice-content h1, .advice-content h2, .advice-content h3 {
+      color: var(--accent-gold);
+      margin: 1.5rem 0 0.75rem;
+      font-weight: 700;
+    }
+    
+    .advice-content h3 { font-size: 1.1rem; }
+
+    .advice-content p {
+      margin-bottom: 1rem;
+    }
+
+    .advice-content ul, .advice-content ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .advice-content li {
+      margin-bottom: 0.25rem;
+    }
+
+    .advice-content strong {
+      color: var(--accent-gold-hover);
+    }
+
+    /* ローディングアニメーション */
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(212, 175, 55, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--accent-gold);
+      animation: spin 1s linear infinite;
+      margin-bottom: 1.5rem;
+    }
+
+    .loader-text {
+      color: var(--accent-gold);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
   <main>
     <header>
-      <h1>mjai-reviewer Frontend</h1>
-      <p class="help">JSON ファイルをアップロードしてレポートを生成します。生成後は画面内で結果を表示できます。</p>
+      <h1>麻雀AIコーチング</h1>
+      <p class="subtitle">AI (Akochan) の解析結果を、OCI Generative AI Coachが分かりやすくアドバイス</p>
     </header>
 
-    <form id="reportForm">
-      <fieldset>
-        <legend>レポート入力</legend>
-        <label>
-          JSON ファイル
-          <input type="file" id="fileInput" accept=".json,application/json" required />
-        </label>
-        <label>
-          席番号
-          <select id="seatSelect">
-            <option value="0">0 (東家)</option>
-            <option value="1">1 (南家)</option>
-            <option value="2">2 (西家)</option>
-            <option value="3">3 (北家)</option>
-          </select>
-        </label>
-        <div class="actions">
-          <button type="submit">レポート生成</button>
-          <a id="downloadLink" href="#" download="report.html" style="display:none; align-self:center;">HTML を保存</a>
+    <div class="container">
+      <!-- 入力用サイドパネル -->
+      <div class="card">
+        <div class="tab-header">
+          <button type="button" class="tab-btn active" onclick="switchTab('file-tab')">ファイル</button>
+          <button type="button" class="tab-btn" onclick="switchTab('url-tab')">URL</button>
+          <button type="button" class="tab-btn" onclick="switchTab('json-tab')">JSON入力</button>
         </div>
-      </fieldset>
-    </form>
 
-    <div id="message"></div>
-    <iframe id="reportFrame" title="Report"></iframe>
+        <form id="analysisForm">
+          <input type="hidden" id="sourceType" value="file" />
+
+          <!-- ファイルタブ -->
+          <div id="file-tab" class="tab-content active">
+            <div class="form-group">
+              <label for="fileInput">解析結果のHTML/JSONファイル</label>
+              <input type="file" id="fileInput" accept=".html,.json,application/json" />
+            </div>
+          </div>
+
+          <!-- URLタブ -->
+          <div id="url-tab" class="tab-content">
+            <div class="form-group">
+              <label for="urlInput">天鳳 ログURL</label>
+              <input type="text" id="urlInput" placeholder="https://tenhou.net/0/?log=..." />
+            </div>
+          </div>
+
+          <!-- JSON直接入力タブ -->
+          <div id="json-tab" class="tab-content">
+            <div class="form-group">
+              <label for="jsonInput">JSONデータ</label>
+              <textarea id="jsonInput" placeholder='{"max_loss_turn": {...}}'></textarea>
+            </div>
+          </div>
+
+          <!-- 席選択 -->
+          <div class="form-group">
+            <label for="seatSelect">プレイヤーの席</label>
+            <select id="seatSelect">
+              <option value="0">0 (東家)</option>
+              <option value="1">1 (南家)</option>
+              <option value="2">2 (西家)</option>
+              <option value="3">3 (北家)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-submit">解析＆アドバイス生成</button>
+        </form>
+
+        <div id="statusMessage"></div>
+      </div>
+
+      <!-- 結果表示メインパネル -->
+      <div class="card">
+        <!-- プレースホルダー -->
+        <div id="placeholder" class="result-placeholder">
+          <svg viewBox="0 0 24 24">
+            <path d="M19,3H5C3.89,3 3,3.89 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.89 20.1,3 19,3M19,19H5V5H19V19M13.96,12.29L11.21,15.75L9.25,13.25L6.5,17H17.5L13.96,12.29Z" />
+          </svg>
+          <p>ファイルをアップロードするか、URLを入力して解析を実行してください</p>
+        </div>
+
+        <!-- ローディング表示 -->
+        <div id="loader" class="loader">
+          <div class="spinner"></div>
+          <div class="loader-text">AI COACH ANALYZING...</div>
+        </div>
+
+        <!-- 解析結果表示エリア -->
+        <div id="result" class="result-container">
+          <div class="summary-header">
+            <div>
+              <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem;">最も損をした打牌の解析</h2>
+              <div class="badge-container">
+                <span id="badgeKyoku" class="badge badge-kyoku">-</span>
+                <span id="badgeTurn" class="badge">-巡目</span>
+              </div>
+            </div>
+            <div class="loss-display">
+              <div class="loss-label">損失期待値 (Loss)</div>
+              <div id="lossValue" class="loss-value">0</div>
+            </div>
+          </div>
+
+          <!-- 手牌表示 -->
+          <div class="tehai-section">
+            <label>手牌</label>
+            <div id="tehaiTiles" class="tehai-tiles">
+              <!-- JSで動的に追加 -->
+            </div>
+          </div>
+
+          <!-- プレイヤーとAIの選択対比 -->
+          <div class="comparison-section">
+            <div class="compare-card player">
+              <div id="playerDiscardTile"></div>
+              <div class="compare-info">
+                <div class="compare-label">あなたの打牌</div>
+                <div id="playerEv" class="compare-ev">EV: -</div>
+              </div>
+            </div>
+            <div class="compare-card ai">
+              <div id="aiDiscardTile"></div>
+              <div class="compare-info">
+                <div class="compare-label">AIの推奨手</div>
+                <div id="aiEv" class="compare-ev">EV: -</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LLMアドバイス -->
+          <div class="advice-section">
+            <div class="advice-title">
+              <svg style="width:24px;height:24px;fill:currentColor" viewBox="0 0 24 24">
+                <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,4M12,6A1.5,1.5 0 0,1 13.5,7.5A1.5,1.5 0 0,1 12,9A1.5,1.5 0 0,1 10.5,7.5A1.5,1.5 0 0,1 12,6M11,10H13V18H11V10Z" />
+              </svg>
+              AIコーチからの個別アドバイス
+            </div>
+            <div id="adviceContent" class="advice-content">
+              <!-- マークダウンがレンダリングされる -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
-    const form = document.getElementById('reportForm');
-    const fileInput = document.getElementById('fileInput');
-    const seatSelect = document.getElementById('seatSelect');
-    const message = document.getElementById('message');
-    const reportFrame = document.getElementById('reportFrame');
-    const downloadLink = document.getElementById('downloadLink');
-    let currentBlobUrl = null;
-
-    function setMessage(text, isError = false) {
-      message.textContent = text;
-      message.style.color = isError ? '#b91c1c' : '#111';
+    // タブ切り替え
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.textContent === (tabId === 'file-tab' ? 'ファイル' : tabId === 'url-tab' ? 'URL' : 'JSON入力'));
+      if (targetBtn) targetBtn.classList.add('active');
+      
+      document.getElementById(tabId).classList.add('active');
+      
+      const sourceMap = { 'file-tab': 'file', 'url-tab': 'url', 'json-tab': 'json' };
+      document.getElementById('sourceType').value = sourceMap[tabId];
     }
 
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const file = fileInput.files[0];
-      if (!file) {
-        setMessage('JSON ファイルを選択してください。', true);
+    // ステータスメッセージ設定
+    function showStatus(text, type = 'info') {
+      const msg = document.getElementById('statusMessage');
+      msg.textContent = text;
+      msg.className = '';
+      msg.classList.add('status-' + type);
+      msg.style.display = 'block';
+    }
+
+    function hideStatus() {
+      document.getElementById('statusMessage').style.display = 'none';
+    }
+
+    // 麻雀牌IDを解析してCSS表現用のオブジェクトを返す
+    function getTileDisplay(tile) {
+      if (!tile) return { name: '?', suit: '', type: 'unknown' };
+      
+      const t = tile.toLowerCase().trim();
+      
+      const ziMap = {
+        'ton': { name: '東', suit: '', type: 'z' },
+        'nan': { name: '南', suit: '', type: 'z' },
+        'sha': { name: '西', suit: '', type: 'z' },
+        'pe': { name: '北', suit: '', type: 'z' },
+        'haku': { name: '白', suit: '', type: 'z' },
+        'hatsu': { name: '發', suit: '', type: 'z' },
+        'chun': { name: '中', suit: '', type: 'z' },
+        // 数字表記の字牌
+        '1z': { name: '東', suit: '', type: 'z' },
+        '2z': { name: '南', suit: '', type: 'z' },
+        '3z': { name: '西', suit: '', type: 'z' },
+        '4z': { name: '北', suit: '', type: 'z' },
+        '5z': { name: '白', suit: '', type: 'z' },
+        '6z': { name: '發', suit: '', type: 'z' },
+        '7z': { name: '中', suit: '', type: 'z' }
+      };
+
+      if (ziMap[t]) {
+        return ziMap[t];
+      }
+
+      // 1m, 2p, 3s などのパターン
+      const matchNumSuit = t.match(/^(\d)(m|p|s)(r?)$/) || t.match(/^(m|p|s)(\d)(r?)$/);
+      if (matchNumSuit) {
+        let num, suit, isRed;
+        if (isNaN(matchNumSuit[1])) {
+          suit = matchNumSuit[1];
+          num = matchNumSuit[2];
+          isRed = !!matchNumSuit[3];
+        } else {
+          num = matchNumSuit[1];
+          suit = matchNumSuit[2];
+          isRed = !!matchNumSuit[3];
+        }
+        
+        const suitNameMap = { 'm': '萬', 'p': '筒', 's': '索' };
+        return {
+          name: num,
+          suit: suitNameMap[suit] || suit,
+          type: suit,
+          isRed: isRed
+        };
+      }
+
+      return { name: tile.toUpperCase(), suit: '', type: 'unknown' };
+    }
+
+    // 牌エレメントのHTML文字列作成
+    function createTileHtml(tileId) {
+      const tileObj = getTileDisplay(tileId);
+      let classNames = ['mj-tile'];
+      if (tileObj.type !== 'unknown') {
+        classNames.push('tile-' + tileObj.type);
+      }
+      if (tileObj.isRed) {
+        classNames.push('tile-red');
+      }
+      
+      // 字牌の個別カラー調整
+      if (tileObj.name === '中') classNames.push('tile-z-chun');
+      if (tileObj.name === '發') classNames.push('tile-z-hatsu');
+
+      return `
+        <div class="${classNames.join(' ')}">
+          <span class="tile-number">${tileObj.name}</span>
+          <span class="tile-suit">${tileObj.suit}</span>
+        </div>
+      `;
+    }
+
+    // フォーム送信イベント
+    document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideStatus();
+
+      const sourceType = document.getElementById('sourceType').value;
+      const seat = document.getElementById('seatSelect').value;
+      
+      const formData = new FormData();
+      let fetchUrl = `/report?seat=${seat}&source_type=${sourceType}`;
+
+      if (sourceType === 'file') {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files[0]) {
+          showStatus('ファイルを選択してください。', 'error');
+          return;
+        }
+        formData.append('file', fileInput.files[0]);
+      } else if (sourceType === 'url') {
+        const urlInput = document.getElementById('urlInput').value.trim();
+        if (!urlInput) {
+          showStatus('URLを入力してください。', 'error');
+          return;
+        }
+        fetchUrl += `&url=${encodeURIComponent(urlInput)}`;
+      } else if (sourceType === 'json') {
+        const jsonInput = document.getElementById('jsonInput').value.trim();
+        if (!jsonInput) {
+          showStatus('JSONデータを入力してください。', 'error');
+          return;
+        }
+        try {
+          JSON.parse(jsonInput); // 文法チェック
+        } catch (err) {
+          showStatus('無効なJSONフォーマットです。', 'error');
+          return;
+        }
+      }
+
+      // UIの状態をリセット
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('result').style.display = 'none';
+      document.getElementById('loader').style.display = 'flex';
+
+      try {
+        const fetchOptions = {
+          method: 'POST'
+        };
+
+        if (sourceType === 'file') {
+          fetchOptions.body = formData;
+        } else if (sourceType === 'json') {
+          fetchOptions.headers = {
+            'Content-Type': 'application/json'
+          };
+          fetchOptions.body = document.getElementById('jsonInput').value.trim();
+        }
+
+        const response = await fetch(fetchUrl, fetchOptions);
+        const resultData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(resultData.error || '不明なエラーが発生しました');
+        }
+
+        renderResult(resultData);
+        showStatus('解析結果を受信しました。', 'success');
+      } catch (err) {
+        showStatus('エラーが発生しました: ' + err.message, 'error');
+        document.getElementById('placeholder').style.display = 'flex';
+      } finally {
+        document.getElementById('loader').style.display = 'none';
+      }
+    });
+
+    // 解析結果のレンダリング
+    function renderResult(data) {
+      const maxLoss = data.max_loss_turn;
+      if (!maxLoss) {
+        showStatus('最大期待値ロス情報が結果に含まれていません。', 'error');
+        document.getElementById('placeholder').style.display = 'flex';
         return;
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // サマリー
+      document.getElementById('badgeKyoku').textContent = maxLoss.kyoku || '不明';
+      document.getElementById('badgeTurn').textContent = (maxLoss.turn || '?') + '巡目';
+      document.getElementById('lossValue').textContent = '-' + (maxLoss.loss || 0).toFixed(0);
 
-      setMessage('レポートを生成中...', false);
-      reportFrame.srcdoc = '';
-      downloadLink.style.display = 'none';
-      URL.revokeObjectURL(currentBlobUrl);
-      currentBlobUrl = null;
-
-      try {
-        const response = await fetch(`/report?seat=${seatSelect.value}`, {
-          method: 'POST',
-          body: formData,
+      // 手牌
+      const tehaiContainer = document.getElementById('tehaiTiles');
+      tehaiContainer.innerHTML = '';
+      if (maxLoss.tehai && Array.isArray(maxLoss.tehai)) {
+        maxLoss.tehai.forEach(tileId => {
+          tehaiContainer.innerHTML += createTileHtml(tileId);
         });
-
-        const text = await response.text();
-        if (!response.ok) {
-          setMessage(`エラー: ${text}`, true);
-          return;
-        }
-
-        setMessage('レポートが生成されました。下のフレームで確認できます。');
-        reportFrame.srcdoc = text;
-        const blob = new Blob([text], { type: 'text/html;charset=utf-8' });
-        currentBlobUrl = URL.createObjectURL(blob);
-        downloadLink.href = currentBlobUrl;
-        downloadLink.style.display = 'inline-block';
-      } catch (error) {
-        setMessage('通信エラーが発生しました。サーバーが起動しているか確認してください。', true);
-        console.error(error);
       }
-    });
+
+      // 比較打牌
+      document.getElementById('playerDiscardTile').innerHTML = createTileHtml(maxLoss.player_discard);
+      document.getElementById('playerEv').textContent = 'EV: ' + (maxLoss.player_ev || 0).toFixed(1);
+      
+      document.getElementById('aiDiscardTile').innerHTML = createTileHtml(maxLoss.ai_discard);
+      document.getElementById('aiEv').textContent = 'EV: ' + (maxLoss.ai_ev || 0).toFixed(1);
+
+      // LLMアドバイス
+      const adviceContent = document.getElementById('adviceContent');
+      if (data.llm_advice) {
+        // markedを使ってMarkdownをHTMLにパース
+        adviceContent.innerHTML = marked.parse(data.llm_advice);
+      } else {
+        adviceContent.innerHTML = '<p style="color: var(--text-muted);">アドバイスを生成できませんでした。</p>';
+      }
+
+      // 表示切り替え
+      document.getElementById('result').style.display = 'block';
+    }
   </script>
 </body>
 </html>

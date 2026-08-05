@@ -1,35 +1,16 @@
 from __future__ import annotations
 
 import os
-import tempfile
-from pathlib import Path
 
-from flask import Flask, Response, jsonify, request, send_file
+from flask import Flask, Response, jsonify, request, render_template, abort
 
-import extract
-import interactakochan
-import interactllm
+import utils
 
 app = Flask(__name__)
 
 
-def _write_temp_file(suffix: str, content: bytes) -> Path:
-    temp_file = Path(tempfile.NamedTemporaryFile(suffix=suffix, delete=False).name)
-    temp_file.write_bytes(content)
-    return temp_file
-
-
-def _remove_file(path: Path | None) -> None:
-    if path is None:
-        return
-    try:
-        path.unlink()
-    except OSError:
-        pass
-
-
-@app.route("/report", methods=["GET", "POST"])
-def report() -> Response | tuple[str, int]:
+@app.route("/analyze", methods=["GET", "POST"])
+def analyze() -> str | Response | tuple[str, int]:
     seat = (request.args.get("seat") or "0").strip()
     if seat not in {"0", "1", "2", "3"}:
         return jsonify(error="seat must be 0, 1, 2, or 3"), 400
@@ -45,61 +26,80 @@ def report() -> Response | tuple[str, int]:
         else:
             return jsonify(error="source_type is required when url/file/json is not provided"), 400
 
-    html_path = None
-    report_html = ""
+    url = None
+    file_content = None
+    json_body = None
+
+    if source_type == "url":
+        url = (request.args.get("url") or "").strip()
+        if not url:
+            return jsonify(error="query parameter 'url' is required for source_type=url"), 400
+    elif source_type == "file":
+        uploaded_file = request.files.get("file")
+        if uploaded_file is None:
+            return jsonify(error="file upload is required for source_type=file"), 400
+        if uploaded_file.filename == "":
+            return jsonify(error="uploaded file is missing or empty"), 400
+        file_content = uploaded_file.read()
+    elif source_type == "json":
+        if not request.is_json:
+            return jsonify(error="JSON body is required for source_type=json"), 400
+        json_body = request.get_data()
+        if not json_body:
+            return jsonify(error="JSON body is empty"), 400
+
     try:
-        if source_type == "url":
-            url = (request.args.get("url") or "").strip()
-            if not url:
-                return jsonify(error="query parameter 'url' is required for source_type=url"), 400
-            report_html = interactakochan.call_report(source_type="url", url=url, seat=int(seat))
-        elif source_type == "file":
-            uploaded_file = request.files.get("file")
-            if uploaded_file is None:
-                return jsonify(error="file upload is required for source_type=file"), 400
-            if uploaded_file.filename == "":
-                return jsonify(error="uploaded file is missing or empty"), 400
-            html_path = _write_temp_file(".json", uploaded_file.read())
-            report_html = interactakochan.call_report(source_type="file", file_path=str(html_path), seat=int(seat))
-        elif source_type == "json":
-            if not request.is_json:
-                return jsonify(error="JSON body is required for source_type=json"), 400
-            body = request.get_data()
-            if not body:
-                return jsonify(error="JSON body is empty"), 400
-            html_path = _write_temp_file(".json", body)
-            report_html = interactakochan.call_report(source_type="json", json_path=str(html_path), seat=int(seat))
-        else:
-            return jsonify(error="source_type must be one of json, file, url"), 400
+        data = utils.run_analysis(
+            source_type=source_type,
+            seat=int(seat),
+            url=url,
+            file_content=file_content,
+            json_body=json_body
+        )
+        return render_template("result.html", **data)
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        raise e
 
-        temp_html_path = _write_temp_file(".html", report_html.encode("utf-8"))
-        parsed_data = extract.extract_report(str(temp_html_path))
-        if parsed_data is None:
-            parsed_data = {}
+@app.route("/", methods=["GET"])
+def index() -> str:
+    return render_template("index.html")
 
-        # OCIのLLMと連携し、アドバイスをJSONに追加して返す処理
-        advice = interactllm._generate_advice(parsed_data)
-        if isinstance(parsed_data, dict):
-            parsed_data["llm_advice"] = advice
-
-        return jsonify(parsed_data)
-
-    finally:
-        _remove_file(html_path)
-        if 'temp_html_path' in locals():
-            _remove_file(temp_html_path)
 
 @app.route("/error", methods=["GET", "POST"])
 def error() -> Response | tuple[str, int]:
-    return jsonify(error="error")
+    abort(500)
 
-@app.route("/analysis", methods=["GET", "POST"])
-def analysis() -> Response | tuple[str, int]:
-    return "analysis"
 
-@app.route("/", methods=["GET"])
-def index() -> Response:
-    return send_file(os.path.join(os.path.dirname(__file__), "frontend.html"))
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template(
+        "error.html",
+        error_code="404",
+        error_title="ページが見つかりません",
+        error_message="お探しのページは移動または削除されたか、URLが間違っている可能性があります。"
+    ), 404
+
+
+@app.errorhandler(400)
+def bad_request(e):
+    return render_template(
+        "error.html",
+        error_code="400",
+        error_title="不正なリクエストです",
+        error_message="送信されたデータに誤りがあるか、処理できない形式のリクエストです。"
+    ), 400
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template(
+        "error.html",
+        error_code="500",
+        error_title="サーバーエラーが発生しました",
+        error_message="バックエンド側で問題が発生しました。しばらく時間を置いてから再度お試しください。"
+    ), 500
 
 
 if __name__ == "__main__":
