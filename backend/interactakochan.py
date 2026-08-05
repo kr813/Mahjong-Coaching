@@ -45,7 +45,7 @@ def _run_command(command: list[str]) -> str:
 
 
 def _build_docker_command(source_type: str, source: str | None, seat: int, engine: str) -> list[str]:
-    command = ["docker", "run", "--rm", "-e", "OMP_NUM_THREADS=8"]
+    command = ["sudo", "docker", "run", "--rm", "-e", "OMP_NUM_THREADS=8"]
     command.extend(["-e", "LD_LIBRARY_PATH=/mjai-reviewer/akochan", "-w", "/mjai-reviewer"])
 
     if source_type in {"file", "json"}:
