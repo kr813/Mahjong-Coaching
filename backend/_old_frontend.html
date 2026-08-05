@@ -706,7 +706,7 @@
       const seat = document.getElementById('seatSelect').value;
       
       const formData = new FormData();
-      let fetchUrl = `/report?seat=${seat}&source_type=${sourceType}`;
+      let fetchUrl = `/analyze?seat=${seat}&source_type=${sourceType}`;
 
       if (sourceType === 'file') {
         const fileInput = document.getElementById('fileInput');

@@ -10,7 +10,6 @@ app = Flask(__name__)
 
 
 @app.route("/analyze", methods=["GET", "POST"])
-@app.route("/report", methods=["GET", "POST"])
 def analyze() -> str | Response | tuple[str, int]:
     seat = (request.args.get("seat") or "0").strip()
     if seat not in {"0", "1", "2", "3"}:
