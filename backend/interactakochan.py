@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _run_command(command: list[str]) -> str:
+    print("Running:", " ".join(command))
     completed = subprocess.run(command, capture_output=True)
     stdout = completed.stdout.decode("utf-8", errors="replace")
     stderr = completed.stderr.decode("utf-8", errors="replace")
