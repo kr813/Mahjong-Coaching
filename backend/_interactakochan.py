@@ -13,6 +13,7 @@ SOURCE_DIR = Path(__file__).resolve().parent / "source"
 DEFAULT_ENDPOINT = os.environ.get("MJAI_REVIEWER_ENDPOINT", "http://localhost:8000/report")
 
 
+
 def resolve_json_path(path: str) -> Path:
     candidate = Path(path)
     if candidate.is_absolute():
@@ -40,6 +41,7 @@ def _run_command(command: list[str]) -> str:
             f"STDOUT:\n{stdout}\nSTDERR:\n{stderr}"
         )
     return stdout
+
 
 
 def _build_curl_command(source_type: str, source: str | None, seat: int, endpoint: str) -> list[str]:
@@ -108,27 +110,19 @@ def run_curl(args: argparse.Namespace) -> int:
     source_kind = "url" if args.url else "json" if args.json else "file"
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     output_path = RESULT_DIR / f"{source_kind}-{timestamp}.html"
-
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    endpoint = f"{args.endpoint}?seat={args.seat}"
-    cmd = ["curl", "-X", "POST", endpoint]
+    try:
+        if args.url:
+            html = call_report(source_type="url", url=args.url, seat=args.seat, endpoint=args.endpoint)
+        elif args.file:
+            html = call_report(source_type="file", file_path=args.file, seat=args.seat, endpoint=args.endpoint)
+        else:
+            html = call_report(source_type="json", json_path=str(resolved_json_path), seat=args.seat, endpoint=args.endpoint)
+    except Exception as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
-    if args.url:
-        cmd.extend(["-G", "--data-urlencode", f"source_type=url", "--data-urlencode", f"url={args.url}"])
-    elif args.file:
-        cmd.extend(["-F", f"file=@{args.file}"])
-    else:
-        cmd.extend(["-H", "Content-Type: application/json", "--data-binary", f"@{resolved_json_path}"])
-
-    cmd.extend(["-o", str(output_path)])
-
-    print("Running:", " ".join(cmd))
-    completed = subprocess.run(cmd, capture_output=True, text=True)
-    if completed.returncode != 0:
-        if completed.stderr:
-            print(completed.stderr, file=sys.stderr)
-        return completed.returncode
-
+    output_path.write_text(html, encoding="utf-8")
     print(f"Saved output to {output_path}")
     return 0
