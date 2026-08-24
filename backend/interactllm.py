@@ -4,7 +4,7 @@ from oci.generative_ai_agent_runtime import GenerativeAiAgentRuntimeClient
 from oci.generative_ai_agent_runtime.models import ChatDetails, CreateSessionDetails
 
 # AIエージェントのエンドポイントを入力
-AGENT_ENDPOINT_OCID = "ocid1.genaiagentendpoint.oc1.ap-osaka-1.amaaaaaapimhcliaa726mjt7r472vztwa2bb46egb6dmsbvtsdvtfcvwe4ba"
+AGENT_ENDPOINT_OCID = "ocid1.genaiagentendpoint.oc1.ap-osaka-1.amaaaaaapimhcliaa726mjt7r472vztwa2bb46egb6dmsbvtsdvtfcvve4ba"
 REGION = "ap-osaka-1"
 
 def _generate_advice(parsed_data=None) -> str:
