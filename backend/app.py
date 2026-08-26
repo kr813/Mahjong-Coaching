@@ -11,18 +11,35 @@ app = Flask(__name__)
 
 @app.route("/analyze", methods=["GET", "POST"])
 def analyze() -> str | Response | tuple[str, int]:
-    seat = (request.args.get("seat") or "0").strip()
+    # seat: フォーム (request.form) → クエリパラメータ (request.args) の順で取得
+    seat = (request.form.get("seat") or request.args.get("seat") or "0").strip()
     if seat not in {"0", "1", "2", "3"}:
         return jsonify(error="seat must be 0, 1, 2, or 3"), 400
 
-    source_type = (request.args.get("source_type") or "").strip().lower()
+    # source_type: 明示指定 → 自動判定
+    source_type = (
+        request.form.get("source_type")
+        or request.args.get("source_type")
+        or ""
+    ).strip().lower()
+
+    # フォームの input_data フィールド (URL or JSONテキスト)
+    input_data = (request.form.get("input_data") or "").strip()
+
     if not source_type:
+        # 自動判定: input_data の内容、ファイル、クエリパラメータから推定
         if request.args.get("url", "").strip():
             source_type = "url"
+        elif input_data:
+            # input_data がURL風なら "url"、そうでなければ "json" テキストとみなす
+            if input_data.startswith("http://") or input_data.startswith("https://"):
+                source_type = "url"
+            else:
+                source_type = "json"
+        elif "file" in request.files and request.files["file"].filename:
+            source_type = "file"
         elif request.is_json:
             source_type = "json"
-        elif "file" in request.files:
-            source_type = "file"
         else:
             return jsonify(error="source_type is required when url/file/json is not provided"), 400
 
@@ -31,22 +48,23 @@ def analyze() -> str | Response | tuple[str, int]:
     json_body = None
 
     if source_type == "url":
-        url = (request.args.get("url") or "").strip()
+        # フォームの input_data → クエリパラメータ url の順で取得
+        url = input_data or (request.args.get("url") or "").strip()
         if not url:
-            return jsonify(error="query parameter 'url' is required for source_type=url"), 400
+            return jsonify(error="URL が指定されていません"), 400
     elif source_type == "file":
         uploaded_file = request.files.get("file")
-        if uploaded_file is None:
-            return jsonify(error="file upload is required for source_type=file"), 400
-        if uploaded_file.filename == "":
-            return jsonify(error="uploaded file is missing or empty"), 400
+        if uploaded_file is None or uploaded_file.filename == "":
+            return jsonify(error="ファイルが選択されていません"), 400
         file_content = uploaded_file.read()
     elif source_type == "json":
-        if not request.is_json:
-            return jsonify(error="JSON body is required for source_type=json"), 400
-        json_body = request.get_data()
+        # フォームの input_data → リクエストボディの順で取得
+        if input_data:
+            json_body = input_data.encode("utf-8")
+        elif request.is_json:
+            json_body = request.get_data()
         if not json_body:
-            return jsonify(error="JSON body is empty"), 400
+            return jsonify(error="JSON データが空です"), 400
 
     try:
         data = utils.run_analysis(
