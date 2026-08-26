@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,37 +13,91 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
         }
+
         .container {
             background-color: #ffffff;
             padding: 40px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             width: 100%;
-            max-width: 480px;
+            max-width: 520px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 25px;
             text-align: center;
         }
-        h1 { font-size: 20px; color: #2c3e50; margin-bottom: 20px; }
+
         .input-group {
             margin-bottom: 20px;
             text-align: left;
         }
-        label { display: block; font-size: 13px; color: #7f8c8d; margin-bottom: 8px; font-weight: bold; }
-        input[type="text"] {
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        /* テキストエリアとセレクトボックス共通のスタイル */
+        textarea,
+        select,
+        input[type="file"] {
             width: 100%;
             padding: 12px;
             box-sizing: border-box;
             border: 1px solid #dcdde1;
             border-radius: 6px;
             font-size: 14px;
+            font-family: inherit;
             transition: border-color 0.2s;
         }
-        input[type="text"]:focus {
+
+        textarea {
+            resize: vertical;
+            height: 100px;
+        }
+
+        textarea:focus,
+        select:focus {
             outline: none;
             border-color: #3498db;
         }
+
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #b2bec3;
+            font-size: 13px;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background-color: #dfe6e9;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
         .submit-btn {
             width: 100%;
             padding: 12px;
@@ -54,79 +109,80 @@
             font-weight: bold;
             cursor: pointer;
             transition: background-color 0.2s;
+            margin-top: 10px;
         }
-        .submit-btn:hover { background-color: #2980b9; }
-        
-        /* エラーメッセージ用スタイル */
+
+        .submit-btn:hover {
+            background-color: #2980b9;
+        }
+
         .error-message {
             color: #e74c3c;
             font-size: 12px;
             margin-top: 6px;
             display: none;
-            text-align: left;
         }
     </style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>麻雀 AI牌譜添削ツール</h1>
-    
-    <!-- フォーム送信時に validateForm() を呼び出す -->
-    <form id="analyzeForm" action="/analyze" method="POST" onsubmit="return validateForm()">
-        <div class="input-group">
-            <label for="url">牌譜URL（天鳳・雀魂など）</label>
-            <input type="text" id="urlInput" name="url" placeholder="https://..." autocomplete="off">
+    <div class="container">
+        <h1>麻雀 AI牌譜添削ツール</h1>
+
+        <!-- ファイル送信を含むため enctype="multipart/form-data" を指定 -->
+        <form id="analyzeForm" action="/analyze" method="POST" enctype="multipart/form-data"
+            onsubmit="return validateForm()">
+
+            <!-- 1. URL または JSON入力用のテキストエリア -->
+            <div class="input-group">
+                <label for="inputData">牌譜URL または JSONデータ</label>
+                <textarea id="inputData" name="input_data" placeholder="https://... または JSONテキストをそのまま貼り付け"></textarea>
+            </div>
+
+            <div class="divider">または</div>
+
+            <!-- 2. ファイルアップロード -->
+            <div class="input-group">
+                <label for="fileInput">JSONファイルを選択</label>
+                <input type="file" id="fileInput" name="file" accept=".json">
+            </div>
+
+            <!-- 3. 自家（seat）の選択プルダウン -->
+            <div class="input-group">
+                <label for="seatSelect">自家（シート）の指定</label>
+                <select id="seatSelect" name="seat">
+                    <option value="0">東家 (East)</option>
+                    <option value="1">南家 (South)</option>
+                    <option value="2">西家 (West)</option>
+                    <option value="3">北家 (North)</option>
+                </select>
+            </div>
+
             <div id="errorMsg" class="error-message"></div>
-        </div>
-        
-        <button type="submit" class="submit-btn">解析を開始する</button>
-    </form>
-</div>
 
-<script>
-    function validateForm() {
-        const urlInput = document.getElementById('urlInput');
-        const errorMsg = document.getElementById('errorMsg');
-        const value = urlInput.value.trim();
+            <button type="submit" class="submit-btn">解析を開始する</button>
+        </form>
+    </div>
 
-        // 1. 空欄チェック
-        if (value === "") {
-            showError("URLを入力してください。");
-            return false;
+    <script>
+        function validateForm() {
+            const inputData = document.getElementById('inputData').value.trim();
+            const fileInput = document.getElementById('fileInput').files.length;
+            const errorMsg = document.getElementById('errorMsg');
+
+            // いずれも入力されていない場合はエラー
+            if (inputData === "" && fileInput === 0) {
+                errorMsg.textContent = "URL、JSONテキスト、またはファイルのうちいずれかを入力・選択してください。";
+                errorMsg.style.display = "block";
+                return false;
+            }
+
+            errorMsg.style.display = "none";
+            return true;
         }
-
-        // 2. 「https://」から始まっているかチェック
-        if (!value.startsWith("https://")) {
-            showError("URLは 'https://' から始まる必要があります。");
-            return false;
-        }
-
-        // 3. 明らかな牌譜URL・ドメインの簡易チェック（例: 天鳳や雀魂のキーワードが含まれているか）
-        // ※必要に応じて判定キーワードは調整してください
-        const validKeywords = ["tenhou", "mahjongsoul", "jantama", "localhost", "127.0.0.1"]; // テスト用にローカルも許容
-        const isValidDomain = validKeywords.some(keyword => value.includes(keyword));
-
-        if (!isValidDomain) {
-            showError("有効な牌譜URL（天鳳・雀魂など）を入力してください。");
-            return false;
-        }
-
-        // エラーがない場合はクリアして送信を許可
-        errorMsg.style.display = "none";
-        urlInput.style.borderColor = "#dcdde1";
-        return true;
-    }
-
-    function showError(message) {
-        const urlInput = document.getElementById('urlInput');
-        const errorMsg = document.getElementById('errorMsg');
-        
-        errorMsg.textContent = message;
-        errorMsg.style.display = "block";
-        urlInput.style.borderColor = "#e74c3c";
-    }
-</script>
+    </script>
 
 </body>
+
 </html>
